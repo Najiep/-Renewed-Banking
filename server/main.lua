@@ -585,6 +585,10 @@ local function checkSourceAccount(source, accountId, action)
     local accountType, Player, identifier = authorizeOrNotify(source, accountId, action)
     if not accountType then return nil end
 
+    if not cachedPlayers[identifier] then
+        UpdatePlayerAccount(identifier)
+    end
+
     if isAccountFrozen(accountId, identifier) then
         BankingSecurity.audit('frozen_account_rejected', source, {
             action = action,
@@ -982,7 +986,7 @@ end)
 
 RegisterNetEvent('Renewed-Banking:server:getPlayerAccounts', function()
     local sourceId = source
-    if not guardRequest(sourceId, 'manageAccount') then return end
+    if not guardRequest(sourceId, 'listAccounts') then return end
 
     local Player = GetPlayerObject(sourceId)
     if not Player then return end
@@ -1007,7 +1011,7 @@ end)
 
 RegisterNetEvent('Renewed-Banking:server:viewMemberManagement', function(data)
     local sourceId = source
-    if type(data) ~= 'table' or not guardRequest(sourceId, 'manageAccount') then return end
+    if type(data) ~= 'table' or not guardRequest(sourceId, 'viewMembers') then return end
 
     local accountId = data.account
     local accountType, _, identifier = authorizeOrNotify(sourceId, accountId, 'manage')
@@ -1053,7 +1057,7 @@ end
 
 RegisterNetEvent('Renewed-Banking:server:addAccountMember', function(accountId, memberIdentifier)
     local sourceId = source
-    if not guardRequest(sourceId, 'manageAccount', tostring(accountId) .. '|' .. tostring(memberIdentifier)) then return end
+    if not guardRequest(sourceId, 'addMember', tostring(accountId) .. '|' .. tostring(memberIdentifier)) then return end
 
     local accountType = authorizeOrNotify(sourceId, accountId, 'manage')
     if not accountType then return end
@@ -1089,7 +1093,7 @@ end)
 RegisterNetEvent('Renewed-Banking:server:removeAccountMember', function(data)
     local sourceId = source
     if type(data) ~= 'table'
-        or not guardRequest(sourceId, 'manageAccount', tostring(data.account) .. '|' .. tostring(data.cid)) then
+        or not guardRequest(sourceId, 'removeMember', tostring(data.account) .. '|' .. tostring(data.cid)) then
         return
     end
 
@@ -1126,7 +1130,7 @@ end)
 
 RegisterNetEvent('Renewed-Banking:server:deleteAccount', function(data)
     local sourceId = source
-    if type(data) ~= 'table' or not guardRequest(sourceId, 'manageAccount', tostring(data.account)) then return end
+    if type(data) ~= 'table' or not guardRequest(sourceId, 'deleteAccount', tostring(data.account)) then return end
 
     local accountType = authorizeOrNotify(sourceId, data.account, 'manage')
     if not accountType then return end
@@ -1210,7 +1214,7 @@ end
 
 RegisterNetEvent('Renewed-Banking:server:changeAccountName', function(accountId, newName)
     local sourceId = source
-    if not guardRequest(sourceId, 'manageAccount', tostring(accountId) .. '|' .. tostring(newName)) then return end
+    if not guardRequest(sourceId, 'renameAccount', tostring(accountId) .. '|' .. tostring(newName)) then return end
 
     local success, reason = updateAccountName(accountId, newName, sourceId)
     if not success then
