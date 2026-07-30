@@ -1,0 +1,22 @@
+# Release Candidate Checklist
+
+- [x] Phase 1 critical authorization fixes implemented
+- [x] Phase 2 modular runtime and config validation implemented
+- [x] Phase 3 normalized schema and migration tooling implemented
+- [x] Phase 4 account, authorization, idempotency, transaction, settlement, statement, and reconciliation services implemented
+- [x] Phase 5 ESX, QBCore, and Qbox adapters implemented
+- [x] Phase 6 client lifecycle, lazy interactions, optional target, fallback, and cleanup implemented
+- [x] Phase 7 maintainable NUI source and deterministic build implemented
+- [x] Phase 8 selected compatibility facade and allowlist implemented
+- [x] Phase 9 automated syntax/build/architecture checks and live test procedure implemented
+- [x] Phase 10 installation, API, security, migration, performance, attribution, and changelog documentation implemented
+- [ ] License/commercial-use decision approved
+- [ ] Real ESX staging matrix passed
+- [ ] Real QBCore staging matrix passed
+- [ ] Real Qbox staging matrix passed
+- [ ] Concurrent/fault-injection live test passed
+- [ ] Production-like migration rehearsal passed with zero unexplained balance difference
+- [ ] Restart/reconciliation test passed
+- [ ] Compatibility consumer contract tests passed
+- [ ] PR moved from draft to ready for review
+- [ ] Release tag created

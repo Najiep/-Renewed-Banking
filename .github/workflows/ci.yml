@@ -1,0 +1,25 @@
+name: Renewed Banking CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, agent/renewed-banking-v3]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Lua runtime
+        run: sudo apt-get update && sudo apt-get install -y lua5.4
+      - name: Lua syntax
+        run: find . -name '*.lua' -print0 | xargs -0 -n1 luac -p
+      - name: Shared unit tests
+        run: lua5.4 tests/run.lua .
+      - name: Architecture rules
+        run: python3 scripts/check_architecture.py
+      - name: Migration checks
+        run: python3 scripts/verify_migrations.py
+      - name: Build NUI
+        working-directory: web
+        run: npm ci && npm run build && npm run check

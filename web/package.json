@@ -1,0 +1,11 @@
+{
+  "name": "renewed-banking-ui",
+  "private": true,
+  "version": "3.0.0-rc.1",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node --check dist/assets/app.js"
+  },
+  "engines": { "node": ">=20" }
+}
