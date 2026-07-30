@@ -1,18 +1,51 @@
 lib.locale()
+
 Config = {
-    -- Framework automatically detected
-    -- QB, QBX, and ESX preconfigured edit the framework.lua to add functionality to other frameworks
-    renewedMultiJob = false, -- QBCORE ONLY! https://github.com/Renewed-Scripts/qb-phone  
-    progressbar = 'circle', -- circle or rectangle (Anything other than circle will default to rectangle)
-    currency = 'USD', -- USD, EUR, GBP ect.....
+    -- Framework automatically detected.
+    -- QB, QBX, and ESX are preconfigured. Edit server/framework.lua to add another framework.
+    renewedMultiJob = false, -- QBCore only: https://github.com/Renewed-Scripts/qb-phone
+    progressbar = 'circle', -- circle or rectangle
+    currency = 'USD',
+
+    security = {
+        auditEnabled = true,
+        minimumTransactionAmount = 1,
+        maximumTransactionAmount = 100000000,
+        requireWholeAmounts = true,
+        maximumCommentLength = 160,
+        minimumAccountIdLength = 3,
+        maximumAccountIdLength = 50,
+        accountIdPattern = '^[a-z0-9][a-z0-9_-]*$',
+        maximumSharedAccountsPerPlayer = 5,
+        defaultActionCooldown = 750,
+        duplicateRequestWindow = 1500,
+        actionCooldowns = {
+            initialize = 500,
+            deposit = 750,
+            withdraw = 750,
+            transfer = 1000,
+            createAccount = 2000,
+            manageAccount = 750,
+            giveCash = 750
+        },
+        reservedAccountIds = {
+            personal = true,
+            system = true,
+            admin = true,
+            bank = true,
+            cash = true
+        }
+    },
+
     atms = {
         `prop_atm_01`,
         `prop_atm_02`,
         `prop_atm_03`,
         `prop_fleeca_atm`
     },
+
     peds = {
-        [1] = { -- Pacific Standard
+        [1] = {
             model = 'u_m_m_bankman',
             coords = vector4(241.44, 227.19, 106.29, 170.43),
             createAccounts = true
@@ -41,7 +74,7 @@ Config = {
             model = 'ig_barry',
             coords = vector4(1174.8, 2708.2, 38.09, 178.52)
         },
-        [8] = { -- paleto
+        [8] = {
             model = 'u_m_m_bankman',
             coords = vector4(-112.22, 6471.01, 31.63, 134.18),
             createAccounts = true
