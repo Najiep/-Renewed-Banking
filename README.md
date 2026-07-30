@@ -1,140 +1,101 @@
-# Renewed-Banking 2.0.0
-<a href='https://ko-fi.com/ushifty' target='_blank'><img height='35' style='border:0px;height:46px;' src='https://az743702.vo.msecnd.net/cdn/kofi3.png?v=0' border='0' alt='Buy Me a Coffee at ko-fi.com' />
- 
- [Renewed Discord](https://discord.gg/P3RMrbwA8n)
+# Renewed Banking v3
 
-# Project Description
-This resource is created & maintained by uShifty#1733 and was not a fork of any of the other banking resources.
-The legacy UI was heavily inspired by No Pixel 3.0
-The 2.0 UI was redesigned by [qwadebot](https://github.com/qw-scripts) Edited by [uShifty](https://github.com/uShifty)
+Renewed Banking v3 is a security-first FiveM banking resource with native adapters for **ESX Legacy**, **QBCore**, and **Qbox**. The v3 runtime replaces JSON transaction blobs and JSON membership lookup with a normalized, append-only ledger and explicit member roles.
 
+> This branch is a release candidate. Keep the pull request in draft until the real FiveM staging matrix, migration rehearsal, and concurrency tests are complete.
 
-# Dependencies
-* [oxmysql](https://github.com/overextended/oxmysql)
-* [ox-lib](https://github.com/overextended/ox_lib)
-* [ox-target](https://github.com/overextended/ox_target)
-Note: Supports QBCore and ESX. You can easily add support for other frameworks by editing the Framework.lua
- 
-# Features
-* Personal, Job, Gang, Shared Accounts
-* Withdraw, Deposit, Transfer between accounts
-* Optimized Resource (0.00ms Running At All Times)
+## Highlights
 
-# Installation
+- Server-authoritative authorization for every money action
+- Atomic database-account transfers with optimistic version checks
+- Durable request idempotency
+- Per-account locks and per-player rate limits
+- Normalized account, member, transaction, settlement, and audit tables
+- Recoverable framework/database settlement boundary
+- Native ESX, QBCore, and Qbox bridges
+- Cursor-paginated statements
+- Lazy bank peds and optional `ox_target`
+- Dependency-free TypeScript-compatible NUI source and reproducible Node build
+- Legacy Renewed-Banking exports routed through the v3 services
+- Explicit migration, verification, reconciliation, and rollback tooling
 
-1) Insert the SQL provided
+## Required resources
 
-2) Integrate the exports found below in any external resource that needs them
- 
-## Transaction Integrations
+1. A supported framework: `es_extended`, `qb-core`, or `qbx_core`
+2. `ox_lib`
+3. `oxmysql`
+4. Optional: `ox_target`
 
-```lua
- -- Place this export anywhere that interacts with a Players bank account. (Where it adds or removes money from bank)
-exports['Renewed-Banking']:handleTransaction(account, title, amount, message, issuer, receiver, type, transID)
- ---@param account<string> - job name or citizenid
- ---@param title<string> - Title of transaction example `Personal Account / ${Player.PlayerData.citizenid}`
- ---@param amount<number> - Amount of money being transacted
- ---@param message<string> - Description of transaction
- ---@param issuer<string> - Name of Business or Character issuing the bill
- ---@param receiver<string> - Name of Business or Character receiving the bill
- ---@param type<string> - deposit | withdraw
- ---@param transID<string> - (optional) Force a specific transaction ID instead of generating one.
+Recommended start order:
 
----@return transaction<table> {
-  ---@param trans_id<string> - Transaction ID for the created transaction
-  ---@param amount<number> - Amount of money being transacted
-  ---@param trans_type<string> - deposit | withdraw
-  ---@param receiver<string> - Name of Business or Character receiving the bill
-  ---@param message<string> - Description of transaction
-  ---@param issuer<string> - Name of Business or Character issuing the bill
-  ---@param time<number> - Epoch timestamp of transaction
----}
-
-
-exports['Renewed-Banking']:getAccountMoney(account)
- ---@param account<string> - Job Name | Custom Account Name
-
----@return amount<number> - Amount of money account has or false
-
-exports['Renewed-Banking']:addAccountMoney(account, amount)
- ---@param account<string> - Job Name | Custom Account Name
-  ---@param amount<number> - Amount of money being transacted
-
----@return complete<boolean> - true | false
-
-exports['Renewed-Banking']:removeAccountMoney(account, amount)
- ---@param account<string> - Job Name | Custom Account Name
-  ---@param amount<number> - Amount of money being transacted
-
----@return complete<boolean> - true | false
+```cfg
+ensure oxmysql
+ensure ox_lib
+ensure es_extended # or qb-core / qbx_core
+ensure ox_target   # optional
+ensure Renewed-Banking
 ```
 
-# QBCore additional Installation Steps 
-## qb-managment conversion
-```lua
-exports['qb-management']:GetAccount => exports['Renewed-Banking']:getAccountMoney
-exports['qb-management']:AddMoney => exports['Renewed-Banking']:addAccountMoney
-exports['qb-management']:RemoveMoney => exports['Renewed-Banking']:removeAccountMoney
-exports['qb-management']:GetGangAccount=> exports['Renewed-Banking']:getAccountMoney
-exports['qb-management']:AddGangMoney=> exports['Renewed-Banking']:addAccountMoney
-exports['qb-management']:RemoveGangMoney=> exports['Renewed-Banking']:removeAccountMoney
+## First start with legacy data
+
+The resource creates the v3 schema automatically. When legacy `bank_accounts_new` rows exist and the v3 account table is empty, database-owned operations are held until an administrator explicitly imports the data.
+
+```text
+banking_migrate_v3 dry-run
+banking_migrate_v3 run
+banking_migrate_v3 verify
+banking_reconcile
 ```
-## Society Bank Access
-Edit your QBCore/Shared/jobs.lua and QBCore/Shared/gangs.lua and add `bankAuth = true` to the job/gang grades which have access to society funds
 
+Create a database backup before `run`. See [Migration Guide](docs/MIGRATION.md).
 
- ## Change Logs
-<details>
- <summary>View History</summary>
+## Configuration
 
- V2.0.0
- ```
- New UI Design
- ESX Support Added
- QB Dependacies switched to OX
- Massive server side optimizations
- Rework inital codebase
- Delete created accounts
- ```
- 
- V1.0.5
- ```
- Fix OX integration being ATM only
- Added Renewed Phones MultiJob Support (Enable in config)
- Fix onResourceStop errors for QB target users
- Fixed a couple Account Menu bugs from 1.0.4 OX integration
- Slight client side cleanup
- Fix exploit allowing players to highjack sub accounts
- ```
- 
- v1.0.4
- ```
- Add server export to get an accounts transactions.
- Add /givecash command
- Added ox lib and target support
- ```
- 
- V1.0.3
- ```
- Fixes the default message when no message is provided when transferring
- Added Bank Checks for those who dont like to configure their QBCore
- Added a check to ensure player cache exists
- Fixed bug with shared accounts and entering a negative value
- ```
- 
- V1.0.2
- ```
- Added Gangs To SQL
- Disabled Deposit At ATM Machines
- Fix Error "Form Submission Canceled"
- QBCore Locale System Implementation
- Implemented Translations To UI (No Need To Edit UI Anymore)
- Fix Balance & Transactions Update
- Fix Transaction Default Message
- ```
+Set `Config.framework` to `esx`, `qb`, or `qbx` when multiple framework resources exist. `auto` is allowed only when exactly one supported framework is started.
 
- V1.0.1
- ```
- Added Banking Blips
- ```
-</details>
+The current default currency precision is `0` to preserve existing whole-unit FiveM economies. Change this only before production migration and keep framework/unit conversion consistent.
+
+## Build the UI
+
+```bash
+cd web
+npm install
+npm run build
+npm run check
+```
+
+The UI has no runtime CDN and no npm runtime dependencies. The build copies TypeScript-compatible source and local CSS into `web/dist` deterministically.
+
+## Administration
+
+Grant the configured ACE permission:
+
+```cfg
+add_ace group.admin renewedbanking.admin allow
+```
+
+Admin commands:
+
+- `banking_migrate_v3 dry-run|run|verify`
+- `banking_reconcile`
+- `banking_freeze <account> <freeze|unfreeze> [reason]`
+- `banking_adjust <account> <credit|debit> <amount> <reason>`
+
+## Compatibility
+
+Legacy exports are enabled through `Config.compatibility.renewedV2Exports`. Privileged invoking resources are denied unless allowed in configuration. The manifest no longer claims to fully provide `qb-management` or `esx_society`; those provider claims remain disabled until contract tests prove a complete replacement surface.
+
+See [API Guide](docs/API.md) and [Security Model](docs/SECURITY.md).
+
+## Project documents
+
+- [Research audit](docs/RESEARCH_AUDIT.md)
+- [Requirements](docs/REQUIREMENTS.md)
+- [System design](docs/DESIGN.md)
+- [Implementation tasks](docs/TASKS.md)
+- [Phases 2–10 status](docs/PHASES_2_10.md)
+- [Release checklist](docs/RELEASE_CHECKLIST.md)
+
+## License
+
+The inherited repository contains CC BY-NC-SA 4.0 material. Confirm your intended commercial, escrow, Tebex, or redistribution use with the rights holder before release. See [ATTRIBUTION.md](ATTRIBUTION.md).
