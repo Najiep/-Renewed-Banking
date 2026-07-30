@@ -100,7 +100,8 @@ function GetCharacterName(Player)
 
     if Framework == 'qb' or Framework == 'qbx' then
         local charinfo = Player.PlayerData and Player.PlayerData.charinfo or {}
-        return ('%s %s'):format(charinfo.firstname or 'Unknown', charinfo.lastname or ''):gsub('%s+$', '')
+        local name = ('%s %s'):format(charinfo.firstname or 'Unknown', charinfo.lastname or '')
+        return (name:gsub('%s+$', ''))
     elseif Framework == 'esx' then
         return Player.getName and Player.getName() or Player.name
     end
