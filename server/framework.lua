@@ -1,59 +1,78 @@
-local Framework = GetResourceState('es_extended') == 'started' and 'esx' or GetResourceState('qbx_core') == 'started' and 'qbx' or GetResourceState('qb-core') == 'started' and 'qb' or 'Unknown'
+local Framework = GetResourceState('es_extended') == 'started' and 'esx'
+    or GetResourceState('qbx_core') == 'started' and 'qbx'
+    or GetResourceState('qb-core') == 'started' and 'qb'
+    or 'Unknown'
+
 local QBCore, ESX, Jobs, Gangs = nil, nil, nil, nil
 local deadPlayers = {}
 
+function GetFrameworkName()
+    return Framework
+end
+
 CreateThread(function()
     if Framework == 'Unknown' then
-        StopResource(GetCurrentResourceName())
+        print('^1[Renewed-Banking]^0 Unsupported framework detected. Stopping resource.')
+        return StopResource(GetCurrentResourceName())
     end
+
     if Framework == 'qb' then
         QBCore = exports['qb-core']:GetCoreObject()
-        Jobs = QBCore.Shared.Jobs
-        Gangs = QBCore.Shared.Gangs
+        Jobs = QBCore.Shared.Jobs or {}
+        Gangs = QBCore.Shared.Gangs or {}
 
-        -- Backwards Compatability
-        ExportHandler("qb-management", "GetAccount", GetAccountMoney)
-        ExportHandler("qb-management", "GetGangAccount", GetAccountMoney)
-        ExportHandler("qb-management", "AddMoney", AddAccountMoney)
-        ExportHandler("qb-management", "AddGangMoney", AddAccountMoney)
-        ExportHandler("qb-management", "RemoveMoney", RemoveAccountMoney)
-        ExportHandler("qb-management", "RemoveGangMoney", RemoveAccountMoney)
+        ExportHandler('qb-management', 'GetAccount', GetAccountMoney)
+        ExportHandler('qb-management', 'GetGangAccount', GetAccountMoney)
+        ExportHandler('qb-management', 'AddMoney', AddAccountMoney)
+        ExportHandler('qb-management', 'AddGangMoney', AddAccountMoney)
+        ExportHandler('qb-management', 'RemoveMoney', RemoveAccountMoney)
+        ExportHandler('qb-management', 'RemoveGangMoney', RemoveAccountMoney)
     elseif Framework == 'qbx' then
-        Jobs = exports.qbx_core:GetJobs()
-        Gangs = exports.qbx_core:GetGangs()
+        Jobs = exports.qbx_core:GetJobs() or {}
+        Gangs = exports.qbx_core:GetGangs() or {}
 
-        -- Backwards Compatability
-        ExportHandler("qb-management", "GetAccount", GetAccountMoney)
-        ExportHandler("qb-management", "GetGangAccount", GetAccountMoney)
-        ExportHandler("qb-management", "AddMoney", AddAccountMoney)
-        ExportHandler("qb-management", "AddGangMoney", AddAccountMoney)
-        ExportHandler("qb-management", "RemoveMoney", RemoveAccountMoney)
-        ExportHandler("qb-management", "RemoveGangMoney", RemoveAccountMoney)
+        ExportHandler('qb-management', 'GetAccount', GetAccountMoney)
+        ExportHandler('qb-management', 'GetGangAccount', GetAccountMoney)
+        ExportHandler('qb-management', 'AddMoney', AddAccountMoney)
+        ExportHandler('qb-management', 'AddGangMoney', AddAccountMoney)
+        ExportHandler('qb-management', 'RemoveMoney', RemoveAccountMoney)
+        ExportHandler('qb-management', 'RemoveGangMoney', RemoveAccountMoney)
     elseif Framework == 'esx' then
         ESX = exports['es_extended']:getSharedObject()
         ESX.RefreshJobs()
-        Jobs = ESX.GetJobs()
-        Gangs = {} -- ESX doesn't have gangs
+        Jobs = ESX.GetJobs() or {}
+        Gangs = {}
 
-        -- Backwards Compatability
-        ExportHandler("esx_society", "GetSociety", GetAccountMoney)
-        RegisterServerEvent('esx_society:getSociety', GetAccountMoney)
-        RegisterServerEvent('esx_society:depositMoney', AddAccountMoney)
-        RegisterServerEvent('esx_society:withdrawMoney', RemoveAccountMoney)
+        ExportHandler('esx_society', 'GetSociety', GetAccountMoney)
+
+        -- Keep society compatibility server-local. Registering these as network
+        -- events would let an untrusted client request direct balance changes.
+        AddEventHandler('esx_society:getSociety', GetAccountMoney)
+        AddEventHandler('esx_society:depositMoney', AddAccountMoney)
+        AddEventHandler('esx_society:withdrawMoney', RemoveAccountMoney)
     end
 end)
 
 function GetSocietyLabel(society)
     if Framework == 'qb' then
-        return Jobs[society] and Jobs[society].label or QBCore.Shared.Gangs[society] and QBCore.Shared.Gangs[society].label or society
+        return Jobs[society] and Jobs[society].label
+            or Gangs[society] and Gangs[society].label
+            or society
     elseif Framework == 'qbx' then
-        return Jobs[society] and Jobs[society].label or Gangs[society] and Gangs[society].label or society
+        return Jobs[society] and Jobs[society].label
+            or Gangs[society] and Gangs[society].label
+            or society
     elseif Framework == 'esx' then
         return Jobs[society] and Jobs[society].label or society
     end
+
+    return society
 end
 
 function GetPlayerObject(source)
+    source = tonumber(source)
+    if not source then return nil end
+
     if Framework == 'qb' then
         return QBCore.Functions.GetPlayer(source)
     elseif Framework == 'qbx' then
@@ -64,191 +83,251 @@ function GetPlayerObject(source)
 end
 
 function GetPlayerObjectFromID(identifier)
+    if type(identifier) ~= 'string' or identifier == '' then return nil end
+
     if Framework == 'qb' then
-        identifier = identifier:upper()
-        return QBCore.Functions.GetPlayerByCitizenId(identifier)
+        return QBCore.Functions.GetPlayerByCitizenId(identifier:upper())
     elseif Framework == 'qbx' then
-        identifier = identifier:upper()
-        return exports.qbx_core:GetPlayerByCitizenId(identifier)
+        return exports.qbx_core:GetPlayerByCitizenId(identifier:upper())
     elseif Framework == 'esx' then
         return ESX.GetPlayerFromIdentifier(identifier)
+            or ESX.GetPlayerFromIdentifier(identifier:lower())
     end
 end
 
 function GetCharacterName(Player)
+    if not Player then return nil end
+
     if Framework == 'qb' or Framework == 'qbx' then
-        return ("%s %s"):format(Player.PlayerData.charinfo.firstname, Player.PlayerData.charinfo.lastname)
+        local charinfo = Player.PlayerData and Player.PlayerData.charinfo or {}
+        return ('%s %s'):format(charinfo.firstname or 'Unknown', charinfo.lastname or ''):gsub('%s+$', '')
     elseif Framework == 'esx' then
-        return Player.name
+        return Player.getName and Player.getName() or Player.name
     end
 end
 
 function GetIdentifier(Player)
+    if not Player then return nil end
+
     if Framework == 'qb' or Framework == 'qbx' then
-        return Player.PlayerData.citizenid
+        return Player.PlayerData and Player.PlayerData.citizenid
     elseif Framework == 'esx' then
         return Player.identifier
     end
 end
 
 function GetFunds(Player)
+    if not Player then return nil end
+
     if Framework == 'qb' or Framework == 'qbx' then
-        local funds = {
-            cash = Player.PlayerData.money.cash,
-            bank = Player.PlayerData.money.bank
+        local money = Player.PlayerData and Player.PlayerData.money or {}
+        return {
+            cash = tonumber(money.cash) or 0,
+            bank = tonumber(money.bank) or 0
         }
-        return funds
     elseif Framework == 'esx' then
-        local funds = {
-            cash = Player.getAccount('money').money,
-            bank = Player.getAccount('bank').money
+        local cash = Player.getAccount('money')
+        local bank = Player.getAccount('bank')
+        return {
+            cash = cash and cash.money or 0,
+            bank = bank and bank.money or 0
         }
-        return funds
     end
 end
 
 function AddMoney(Player, Amount, Type, comment)
+    if not Player or type(Amount) ~= 'number' or Amount <= 0 then return false end
+
     if Framework == 'qb' or Framework == 'qbx' then
-        Player.Functions.AddMoney(Type, Amount, comment)
+        local result = Player.Functions.AddMoney(Type, Amount, comment)
+        return result ~= false
     elseif Framework == 'esx' then
         if Type == 'cash' then
             Player.addAccountMoney('money', Amount, comment)
+            return true
         elseif Type == 'bank' then
             Player.addAccountMoney('bank', Amount, comment)
+            return true
         end
     end
+
+    return false
 end
 
 function RemoveMoney(Player, Amount, Type, comment)
+    if not Player or type(Amount) ~= 'number' or Amount <= 0 then return false end
+
     if Framework == 'qb' or Framework == 'qbx' then
         local currentAmount = Player.Functions.GetMoney(Type)
-        if currentAmount >= Amount then
-            Player.Functions.RemoveMoney(Type, Amount, comment)
-            return true
+        if currentAmount and currentAmount >= Amount then
+            local result = Player.Functions.RemoveMoney(Type, Amount, comment)
+            return result ~= false
         end
     elseif Framework == 'esx' then
-        if Type == 'cash' then
-            local currentAmount = Player.getAccount('money').money
-            if currentAmount >= Amount then
-                Player.removeAccountMoney('money', Amount, comment)
-                return true
-            end
-        elseif Type == 'bank' then
-            local currentAmount = Player.getAccount('bank').money
-            if currentAmount >= Amount then
-                Player.removeAccountMoney('bank', Amount, comment)
-                return true
-            end
+        local accountName = Type == 'cash' and 'money' or Type
+        local account = Player.getAccount(accountName)
+        local currentAmount = account and account.money or 0
+
+        if currentAmount >= Amount then
+            Player.removeAccountMoney(accountName, Amount, comment)
+            return true
         end
     end
+
     return false
 end
 
 function GetJobs(Player)
+    if not Player then return {} end
+
     if Framework == 'qb' or Framework == 'qbx' then
-        if Config.renewedMultiJob then
-            local jobs = exports['qb-phone']:getJobs(Player.PlayerData.citizenid)
-            local temp = {}
-            for k,v in pairs(jobs) do
-                temp[#temp+1] = {
-                    name = k,
-                    grade = tostring(v.grade)
+        if Config.renewedMultiJob and GetResourceState('qb-phone') == 'started' then
+            local jobs = exports['qb-phone']:getJobs(Player.PlayerData.citizenid) or {}
+            local result = {}
+
+            for name, data in pairs(jobs) do
+                result[#result + 1] = {
+                    name = name,
+                    grade = tostring(data.grade)
                 }
             end
-            return temp
-        else
-            return {
-                name = Player.PlayerData.job.name,
-                grade = tostring(Player.PlayerData.job.grade.level)
-            }
+
+            return result
         end
+
+        local job = Player.PlayerData and Player.PlayerData.job
+        if not job then return {} end
+
+        return {
+            name = job.name,
+            grade = tostring(job.grade and job.grade.level or 0)
+        }
     elseif Framework == 'esx' then
+        if not Player.job then return {} end
+
         return {
             name = Player.job.name,
             grade = tostring(Player.job.grade)
         }
     end
+
+    return {}
 end
 
 function GetGang(Player)
+    if not Player then return false end
+
     if Framework == 'qb' or Framework == 'qbx' then
-        return Player.PlayerData.gang.name
-    elseif Framework == 'esx' then
-        return false
+        return Player.PlayerData and Player.PlayerData.gang and Player.PlayerData.gang.name or false
     end
+
+    return false
 end
 
 function IsJobAuth(job, grade)
-    local numGrade = tonumber(grade)
-    if Framework == 'qb' or Framework == 'qbx' then
-        return Jobs[job].grades[grade] and Jobs[job].grades[grade].bankAuth or Jobs[job].grades[numGrade] and Jobs[job].grades[numGrade].bankAuth
-    elseif Framework == 'esx' then
-        return Jobs[job].grades[grade] and Jobs[job].grades[grade].name == 'boss' or Jobs[job].grades[numGrade] and Jobs[job].grades[numGrade].name == 'boss'
+    if type(job) ~= 'string' or not Jobs or not Jobs[job] or not Jobs[job].grades then
+        return false
     end
+
+    local stringGrade = tostring(grade)
+    local numberGrade = tonumber(grade)
+    local gradeData = Jobs[job].grades[stringGrade] or (numberGrade and Jobs[job].grades[numberGrade])
+
+    if not gradeData then return false end
+
+    if Framework == 'qb' or Framework == 'qbx' then
+        if gradeData.bankAuth ~= nil then
+            return gradeData.bankAuth == true
+        end
+
+        return gradeData.isboss == true
+    elseif Framework == 'esx' then
+        return gradeData.name == 'boss'
+    end
+
+    return false
 end
 
 function IsGangAuth(Player, gang)
-    if Framework == 'qb' or Framework == 'qbx' then
-        local grade = tostring(Player.PlayerData.gang.grade.level)
-        local gradeNum = tonumber(grade)
-        return Gangs[gang].grades[grade] and Gangs[gang].grades[grade].bankAuth or Gangs[gang].grades[gradeNum] and Gangs[gang].grades[gradeNum].bankAuth
-    elseif Framework == 'esx' then
+    if (Framework ~= 'qb' and Framework ~= 'qbx') or not Player or not Gangs or not Gangs[gang] then
         return false
     end
+
+    local gangData = Player.PlayerData and Player.PlayerData.gang
+    local grade = gangData and gangData.grade and gangData.grade.level
+    if grade == nil or not Gangs[gang].grades then return false end
+
+    local stringGrade = tostring(grade)
+    local numberGrade = tonumber(grade)
+    local gradeData = Gangs[gang].grades[stringGrade] or (numberGrade and Gangs[gang].grades[numberGrade])
+
+    if not gradeData then return false end
+
+    if gradeData.bankAuth ~= nil then
+        return gradeData.bankAuth == true
+    end
+
+    return gradeData.isboss == true
 end
 
-function Notify(src, settings)
-    TriggerClientEvent("ox_lib:notify", src, settings)
+function Notify(source, settings)
+    TriggerClientEvent('ox_lib:notify', source, settings)
 end
 
 function IsDead(Player)
+    if not Player then return false end
+
     if Framework == 'qb' or Framework == 'qbx' then
-        return Player.PlayerData.metadata.isdead
+        return Player.PlayerData and Player.PlayerData.metadata and Player.PlayerData.metadata.isdead == true
     elseif Framework == 'esx' then
-        return deadPlayers[Player.source]
+        return deadPlayers[Player.source] == true
     end
+
+    return false
 end
 
 function GetFrameworkGroups()
-    return Jobs, Gangs
+    return Jobs or {}, Gangs or {}
 end
 
---Misc Framework Events
-
 AddEventHandler('QBCore:Server:PlayerLoaded', function(Player)
-    local cid = Player.PlayerData.citizenid
-    UpdatePlayerAccount(cid)
+    if not Player or not Player.PlayerData then return end
+    UpdatePlayerAccount(Player.PlayerData.citizenid)
 end)
 
 RegisterNetEvent('esx:onPlayerDeath', function()
-	deadPlayers[source] = true
+    deadPlayers[source] = true
 end)
 
 RegisterNetEvent('esx:onPlayerSpawn', function()
     local Player = GetPlayerObject(source)
+    if not Player then return end
+
     local cid = GetIdentifier(Player)
-	if deadPlayers[source] then
-		deadPlayers[source] = nil
-	end
-    UpdatePlayerAccount(cid)
+    deadPlayers[source] = nil
+
+    if cid then
+        UpdatePlayerAccount(cid)
+    end
 end)
 
-AddEventHandler('esx:playerDropped', function(playerId, reason)
-	if deadPlayers[playerId] then
-		deadPlayers[playerId] = nil
-	end
+AddEventHandler('playerDropped', function()
+    deadPlayers[source] = nil
 end)
-
 
 AddEventHandler('onResourceStart', function(resourceName)
-    Wait(250)
-    if resourceName == GetCurrentResourceName() then
-        for _, v in ipairs(GetPlayers()) do
-            local Player = GetPlayerObject(v)
-            if Player then
-                local cid = GetIdentifier(Player)
+    if resourceName ~= GetCurrentResourceName() then return end
+
+    CreateThread(function()
+        Wait(250)
+
+        for _, playerId in ipairs(GetPlayers()) do
+            local Player = GetPlayerObject(playerId)
+            local cid = Player and GetIdentifier(Player)
+
+            if cid then
                 UpdatePlayerAccount(cid)
             end
         end
-    end
+    end)
 end)
