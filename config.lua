@@ -25,7 +25,12 @@ Config = {
             withdraw = 750,
             transfer = 1000,
             createAccount = 2000,
-            manageAccount = 750,
+            listAccounts = 500,
+            viewMembers = 500,
+            addMember = 1000,
+            removeMember = 1000,
+            deleteAccount = 1500,
+            renameAccount = 1000,
             giveCash = 750
         },
         reservedAccountIds = {
